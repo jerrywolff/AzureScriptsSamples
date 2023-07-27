@@ -1,16 +1,35 @@
 ﻿<#
+.NOTES
 
+    THIS CODE-SAMPLE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED 
 
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR 
 
+    FITNESS FOR A PARTICULAR PURPOSE.
 
+    This sample is not supported under any Microsoft standard support program or service. 
 
+    The script is provided AS IS without warranty of any kind. Microsoft further disclaims all
 
+    implied warranties including, without limitation, any implied warranties of merchantability
 
+    or of fitness for a particular purpose. The entire risk arising out of the use or performance
 
+    of the sample and documentation remains with you. In no event shall Microsoft, its authors,
 
+    or anyone else involved in the creation, production, or delivery of the script be liable for 
 
+    any damages whatsoever (including, without limitation, damages for loss of business profits, 
 
-Other uris 
+    business interruption, loss of business information, or other pecuniary loss) arising out of 
+
+    the use of or inability to use the sample or documentation, even if Microsoft has been advised 
+
+    of the possibility of such damages, rising out of the use of or inability to use the sample script, 
+
+    even if Microsoft has been advised of the possibility of such damages.
+
+Other uris :
  #$uri = "https://management.azure.com/subscriptions/$($sub.id)/providers/Microsoft.Web/skus?api-version=2022-03-01"
 
 #$uri = "https://management.azure.com/subscriptions/$($sub.id)/resourceGroups/wolffappserviceplanrg/providers/Microsoft.Web/serverfarms/wolffappserviceplan01?api-version=2022-09-01"
@@ -18,23 +37,17 @@ Other uris
 
 
 
+ 
+    Script Name: get_appserviceplan_hw_skus.ps1
+    Description: Custom script collect Subscription HW skus available for Application Service plans 
+    NOTE:   Scripts creates an HTML report and add results to a storage account
+           "c:\temp\appserviceplan_hwSkus.html"
+           
 
-#>
-
-
-
-
-
-
-
-
+#> 
 
 
-
-
-
-
-
+ 
 
 
  connect-azaccount 
@@ -46,6 +59,7 @@ Other uris
 
 
    set-azcontext -Subscription $sub.Name
+ 
  
 
           Write-Host "Authenticating to Azure..." -ForegroundColor Cyan
@@ -101,7 +115,7 @@ Other uris
 
 $uri = "https://management.azure.com/subscriptions/$($sub.id)/resourceGroups/wolffappserviceplanrg/providers/Microsoft.Web/serverfarms/wolffappserviceplan01/skus?api-version=2022-03-01"
 
-$response = Invoke-RestMethod -Uri $uri -Headers $authHeader -Method GET
+$response = Invoke-RestMethod -Uri $uri -Headers $($body.Headers) -Method GET
 
 
 
@@ -182,7 +196,7 @@ invoke-item "c:\temp\appserviceplan_hwSkus.html"
 
 $Region = "West US"
 
- $subscriptionselected = 'wolffentpsub'
+ $subscriptionselected = '<subscription>'
 
 
 

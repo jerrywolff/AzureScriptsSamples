@@ -159,7 +159,10 @@ Function New-ScheduledTaskFolder
 
         Finally { $ErrorActionPreference = "continue" } }
 
-    
+  $timehour = Get-Date -format "HH tt"
+
+   
+
 
 Function Create-AndRegisterApplogTask
 
@@ -167,9 +170,12 @@ Function Create-AndRegisterApplogTask
 
  Param ($taskname, $taskpath,$taskdescription, $username, $Password , $taskfolder, $tasksscript)
 
- $action = New-ScheduledTaskAction -Execute 'C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe' -argument "c:\programdata\jobs\$taskname"
+ $action = New-ScheduledTaskAction -Execute 'C:\Windows\System32\WindowsPowerShell\v1.0\Powershell.exe' -argument "-ExecutionPolicy Bypass  c:\programdata\jobs\$taskname"
  
- $trigger =  New-ScheduledTaskTrigger   -once -At 7am -RepetitionDuration  (New-TimeSpan -Days 1)  -RepetitionInterval  (New-TimeSpan -minutes 5)
+ $trigger =  New-ScheduledTaskTrigger -AtLogOn  -User $env:username
+$pr = New-ScheduledTaskPrincipal  -Groupid  "INTERACTIVE" 
+$trigger.Repetition = (New-ScheduledTaskTrigger -once -at "$timehour" -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -hours 24)).repetition
+
 
  Register-ScheduledTask  -Action $action -Trigger $trigger -TaskName  $taskname -Description "$taskdescription" -TaskPath $taskpath -RunLevel Highest   -User "$username" -Password "$Password"  
 
@@ -218,7 +224,7 @@ If(Get-ScheduledTask -TaskName $taskname -EA 0)
 
 New-ScheduledTaskFolder -taskname $taskname -taskpath $taskpath  -taskfolder $taskfolder -taskscript $tasksscripts -Argument "$taskfolder$taskname" 
 
-Create-AndRegisterApplogTask -taskname $taskname -taskpath $taskpath -taskfolder $taskfolder -taskdescription $taskdescription -taskscript $tasksscripts -Username $username -Password $Password -Argument "-ExecutionPolicy Bypass  c:\programdata\jobs\$taskname" | Out-Null
+Create-AndRegisterApplogTask -taskname $taskname -taskpath $taskpath -taskfolder $taskfolder -taskdescription $taskdescription -taskscript $tasksscripts -Username $username -Password $Password -Argument "c:\programdata\jobs\$taskname" | Out-Null
 
 Create-NewApplotTaskSettings -taskname $taskname -taskpath $taskpath -User  $username -Password $Password  | Out-Null
 }

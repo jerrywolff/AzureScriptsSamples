@@ -21,6 +21,7 @@
 
              foreach ($Rg in $RGs)
              {
+          
 
                $VNETGWConnections =  Get-AZVirtualNetworkGatewayConnection    -ResourceGroupName $($rg.resourcegroupname)
                    foreach($VNETGWConnection in $VNETGWConnections)
@@ -46,10 +47,9 @@
                                     $Vnetconnobj | add-member  AuthorizationKey $($VNETGWConnection.AuthorizationKey)
                                     $Vnetconnobj | add-member  ConnectionMode $($VNETGWConnection.ConnectionMode)
                                     $Vnetconnobj | add-member  ConnectionProtocol $($VNETGWConnection.ConnectionProtocol)
-                                    #$Vnetconnobj | add-member  ConnectionStatus $($VNETGWConnection.ConnectionStatus)
-                                    #$Vnetconnobj | add-member  ConnectionType $($VNETGWConnection.ConnectionType)
+ 
                                     $Vnetconnobj | add-member  DpdTimeoutSeconds $($VNETGWConnection.DpdTimeoutSeconds)
-                                   # $Vnetconnobj | add-member  EgressBytesTransferred $($VNETGWConnection.EgressBytesTransferred)
+ 
                                     $Vnetconnobj | add-member  EgressNatRules $($VNETGWConnection.EgressNatRules)
                                     $Vnetconnobj | add-member  EgressNatRulesText $($VNETGWConnection.EgressNatRulesText)
                                     $Vnetconnobj | add-member  EnableBgp $($VNETGWConnection.EnableBgp)
@@ -58,22 +58,22 @@
                                     $Vnetconnobj | add-member  ExpressRouteGatewayBypass $($VNETGWConnection.ExpressRouteGatewayBypass)
                                     $Vnetconnobj | add-member  GatewayCustomBgpIpAddresses $($VNETGWConnection.GatewayCustomBgpIpAddresses)
                                     $Vnetconnobj | add-member  GatewayCustomBgpIpAddressesText $($VNETGWConnection.GatewayCustomBgpIpAddressesText)
-                                    #$Vnetconnobj | add-member  Id $($VNETGWConnection.Id)
-                                    $Vnetconnobj | add-member  IngressBytesTransferred $($VNETGWConnection.IngressBytesTransferred)
+                                    $Vnetconnobj | add-member  Id $($VNETGWConnection.Id)
+ 
                                     $Vnetconnobj | add-member  IngressNatRules $($VNETGWConnection.IngressNatRules)
                                     $Vnetconnobj | add-member  IngressNatRulesText $($VNETGWConnection.IngressNatRulesText)
                                     $Vnetconnobj | add-member  IpsecPolicies $($VNETGWConnection.IpsecPolicies)
                                     $Vnetconnobj | add-member  LocalNetworkGateway2 $($VNETGWConnection.LocalNetworkGateway2)
                                     $Vnetconnobj | add-member  LocalNetworkGateway2Text $($VNETGWConnection.LocalNetworkGateway2Text)
-                                    $Vnetconnobj | add-member  Location $($VNETGWConnection.Location)
+ 
                                     $Vnetconnobj | add-member  Name $($VNETGWConnection.Name)
                                     $Vnetconnobj | add-member  Peer $($VNETGWConnection.Peer)
                                     $Vnetconnobj | add-member  PeerText $($VNETGWConnection.PeerText)
                                     $Vnetconnobj | add-member  ProvisioningState $($VNETGWConnection.ProvisioningState)
-                                    $Vnetconnobj | add-member  ResourceGroupName $($VNETGWConnection.ResourceGroupName)
+ 
                                     $Vnetconnobj | add-member  ResourceGuid $($VNETGWConnection.ResourceGuid)
                                     $Vnetconnobj | add-member  RoutingWeight $($VNETGWConnection.RoutingWeight)
-                                    #$Vnetconnobj | add-member  SharedKey $($VNETGWConnection.SharedKey)
+ 
                                     $Vnetconnobj | add-member  Tag $($VNETGWConnection.Tag)
                                     $Vnetconnobj | add-member  TagsTable $($VNETGWConnection.TagsTable)
                                     $Vnetconnobj | add-member  TrafficSelectorPolicies $($VNETGWConnection.TrafficSelectorPolicies)
@@ -87,8 +87,7 @@
                                     $Vnetconnobj | add-member  VirtualNetworkGateway2 $($VNETGWConnection.VirtualNetworkGateway2)
                                     $Vnetconnobj | add-member  VirtualNetworkGateway2Text $($VNETGWConnection.VirtualNetworkGateway2Text)
 
-
-
+ 
 
                                    # $subobj | export-csv "c:\temp\address_prefixes_in_use.csv" -append -notypeinformation
                                    [array]$ConnectionTraffic +=  $Vnetconnobj
@@ -151,8 +150,9 @@ ConvertTo-Html -Head $CSS ).replace('0','<font color=red>0</font>') | out-file c
   $resultsfilename = 'networktrafficreport.csv'
 
 
-$Connectionfullrecords = $ConnectionTraffic | Select AuthorizationKey, `
+$Connectionfullrecords = $ConnectionTraffic | select AuthorizationKey, `
 ConnectionMode, `
+ConnectionName, `
 ConnectionProtocol, `
 ConnectionStatus, `
 ConnectionType, `
@@ -162,6 +162,7 @@ EgressNatRules, `
 EgressNatRulesText, `
 EnableBgp, `
 EnablePrivateLinkFastPath, `
+Environment, `
 Etag, `
 ExpressRouteGatewayBypass, `
 GatewayCustomBgpIpAddresses, `
@@ -182,6 +183,7 @@ ResourceGroupName, `
 ResourceGuid, `
 RoutingWeight, `
 SharedKey, `
+Subscription, `
 Tag, `
 TagsTable, `
 TrafficSelectorPolicies, `
@@ -206,7 +208,7 @@ VirtualNetworkGateway2Text `
 
 $Region = "West US"
 
- $subscriptionselected = 'wolffentpsub'
+ $subscriptionselected = '<subscription>'
 
 
 

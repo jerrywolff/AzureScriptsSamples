@@ -40,9 +40,7 @@ $timeend = (get-date).AddDays(1)
 $i = 0
 
 do
-{  
-    
-     
+{   
 
     [array]$timelist += $timepoint.AddHours($i)
    $i = ($i + 1)
@@ -50,8 +48,6 @@ do
  # $timelist
 } until ($timepoint.AddHours($i) -ge $($timeend) )
  
-
-New-EventLog -source manage_shutdown_monitor  -LogName Application  -ErrorAction Ignore
 
 
 $timetostop = $($timelist.datetime)   | OGV -Title "Please pick a time to Stop/Complete work" -PassThru | Select -First 1 
@@ -100,7 +96,7 @@ $timetostop = $($timelist.datetime)   | OGV -Title "Please pick a time to Stop/C
                 Get-ItemProperty -Path  "HKLM:\SOFTWARE\MANAGE_SHUTDOWN" -Name "Timetostop","Timecheck","Timeleft", "Timetostopset", "Timetostopsetdate"  | select Timecheck, TimetoStop , Timeleft , Timetostopset, Timetostopsetdate
  
                 Write-EventLog -LogName "Application" -Source "Manage_shutdown_monitor" -EventID 6666 -EntryType Information `
-             -Message "Set time to Timetostop  Registry for monitor" -Category 1 -RawData 10,20
+             -Message "Set time to Timetostop  Registry for monitor $timecheck" -Category 1 -RawData 10,20
 
 
 

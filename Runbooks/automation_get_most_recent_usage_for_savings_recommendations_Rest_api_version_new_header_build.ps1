@@ -5,7 +5,7 @@ import-module -Name az.billing -force -ErrorAction SilentlyContinue
 import-module -Name az.advisor -force -ErrorAction SilentlyContinue
  import-module -name Az.Reservations -force  -ErrorAction SilentlyContinue
    
-                 $null = connect-AzAccount -id
+                 $null = connect-AzAccount # -id
 
 
 
@@ -128,9 +128,9 @@ $datestart = get-date($date) -Format 'yyyyMM'
         # Set the request URI
  ######################  Commercial 
  
-     $requesturi = "https://management.azure.com$billingaccount/providers/Microsoft.CostManagement/benefitRecommendations?$filter=properties/lookBackPeriod eq 'Last7Days' AND properties/term eq 'P1Y'&$expand=properties/usage,properties/allRecommendationDetails&api-version=2022-10-01"
+    # $requesturi = "https://management.azure.com$billingaccount/providers/Microsoft.CostManagement/benefitRecommendations?$filter=properties/lookBackPeriod eq 'Last7Days' AND properties/term eq 'P1Y'&$expand=properties/usage,properties/allRecommendationDetails&api-version=2022-10-01"
  
-
+ $requesturi =  "https://management.azure.com$billingaccount/providers/Microsoft.CostManagement/benefitUtilizationSummaries?api-version=2023-03-01"
      #$requesturi =  "https://management.azure.com/providers/Microsoft.Billing/billingAccounts/$billingaccount/providers/Microsoft.CostManagement/costAllocationRules/{ruleName}?api-version=2020-03-01-preview"
   #     $requesturi ="https://management.azure.com/$billingaccount/providers/Microsoft.CostManagement/query?api-version=2022-10-01"
 

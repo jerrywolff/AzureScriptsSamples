@@ -1,14 +1,4 @@
-<#
-.SYNOPSIS  
- Wrapper script for start & stop Az VM's
-.DESCRIPTION  
- Wrapper script for start & stop Az VM's
-.EXAMPLE  
-.\automation_sequencestart_stop_by_sub_by_tag.ps1  -Action "Value2" -Subscription "Subscriptionname"
-Version History  
-v1.0   - Initial Release  
- 
-
+﻿<#
 .NOTES
 
     THIS CODE-SAMPLE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED 
@@ -39,197 +29,221 @@ v1.0   - Initial Release
 
     even if Microsoft has been advised of the possibility of such damages.
 
+Description: interactive script to get azure resources in a subscription selected from list
+              Select resources to group for tagging
+              entering metadata asked in prompts 
+ 
+
 #> 
- 
 
-param(
+#Set-AzureResourceGroup -Name GroupName -Tag @{Name='TagName';Value='TagValue'} #this will replace all the tags with this one
+#    New-AzureResourceGroupDeployment -ResourceGroupName GroupName ...
+## Suppres misc errors
+ $ErrorActionPreference = 'Continue'
 
-[String]$Action = $(throw "Value for Action is missing"),
-[String]$Subscription = $(throw "Value for Action is missing")
-)
+Import-Module az.compute  -Force 
+##########################################################################################
 
-#----------------------------------------------------------------------------------
-#---------------------LOGIN TO AZURE AND SELECT THE SUBSCRIPTION-------------------
-#----------------------------------------------------------------------------------
-try
-{
-    "Logging in to Azure..."
-   Connect-AzAccount -Identity
+
+#connect-azaccount -identity
+connect-azaccount #-Environment AzureUSGovernment
   
-}
-catch {
-    Write-Error -Message $_.Exception
-    throw $_.Exception
-}
-Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
-$ErrorActionPreference = 'silentlyContinue'
+$updatedtags  = ''
+
+$FulltagsAudit = ''
 
 
+ $sub  = get-azsubscription  
 
- #$action = 'Start'
+ $selectedsubscription = get-azsubscription | Select name, TenantID | ogv -PassThru -title " Select Subscription to update" | select name
+ $Subscription = $($selectedsubscription.name)
 
-         $subscriptions = Get-azSubscription -SubscriptionName $Subscription
+ Set-azContext -subscription  $Subscription
+            
 
- 
-            Set-azcontext -Subscription $Subscriptions.Name
-
-            $vms = get-azvm -status | ? {$_.Tags.Keys -like "*Sequence*" }   |select name,subscription, ResourceGroupName, powerstate, tags, id
-
-            $startstopsequences = 1,2,3
-
-
-
-switch($Action) {
-           stop {$actionsequence = "Sequencestop"}
-       
-           start {$actionsequence = "Sequencestart"}
-        
- 
-    
-            Default {"none"}
-}
-
-$vMsequencelist = ''
-  $sequence = ''
-
-    foreach($vm in $vms)
-    {
-
-                      $tags = Get-AzVM -Name $($vm.name) -status | ? {$_.Tags.Keys -eq "$actionsequence"}   
-                   
-                     $sequencevaluename = $($tags.tags.Keys) | ? { $_ -eq "$actionsequence" } 
-               
-
-    
-
-
-                    $($tags.tags.$actionsequence).ToString()
-
-                      $tagdata = Get-AzTag -ResourceId $tags.id  
-                    
-                   #  this works for my env but not customer See line xxxx.tostring() for customer working line
-                   #  $tagkey =  $tagdata.Properties.TagsProperty["$($actionsequence)"]  
-                    $tagkey =  $($tags.tags.$actionsequence).ToString()
-                            
-                 $tagdata.Properties.TagsProperty["$actionsequence"]
-
-
-                 $vMOrderobj = New-object PSObject 
-
-                         $vMOrderobj| add-member -MemberType NoteProperty -Name  VMNAME  -Value $($vm.Name)
-                          $vMOrderobj | add-member -MemberType NoteProperty -Name Powerstate  -Value $($vm.powerstate)
-                          $vMOrderobj | add-member -MemberType NoteProperty -Name Sequencetag  -Value   $sequencevaluename
-                          $vMOrderobj| add-member -MemberType NoteProperty -Name  TagSequencenumber -Value   "$($tagkey)"
-                          $vMOrderobj| add-member -MemberType NoteProperty -Name  Subscription -Value  $($subscriptions.name)
-                          $vMOrderobj| add-member -MemberType NoteProperty -Name  Resourcegroup -Value  $($VM.Resourcegroupname)
-                          
-                      [array]$vMsequencelist +=   $vMOrderobj
-
-                     $Sequencelist  = $vMsequencelist | where vmname -ne $null | sort-object TagSequencenumber 
-                 
-        } 
-
-        $Sequencelist 
-        $Sequencelist | Measure-Object | select count 
-
- foreach($sequence in $Sequencelist)
- {
-
-    if ($actionsequence.Trim().ToLower() -eq "Sequencestop")
-    {
-         
- 
-                        try
-                         { 
-                     $tagdata = Get-AzTag -ResourceId $sequence.id  
-                    
-                     $tagkey =  $tagdata.Properties.TagsProperty["$($actionsequence)"]  
-                         
-                          $vmobj = New-object PSObject 
-
-                          $vmobj | add-member -MemberType NoteProperty -Name  VMNAME  -Value $($sequence.VMName)
-                          $vmobj | add-member -MemberType NoteProperty -Name Powerstate  -Value $($sequence.powerstate)
-                          $vmobj | add-member -MemberType NoteProperty -Name Sequencetag  -Value $($sequence.Sequencetag)
-                          $vmobj | add-member -MemberType NoteProperty -Name  TagSequencenumber -Value  $($tagkey)
-                
-                          
-                          $vmobj           
-
-                    write-OUTOPUT " Executing action : $($actionsequence) on $($sequence.vmname) Sequence  $($sequence.TagSequencenumber)" 
-
-                                Write-Output "Stopping the VM : $($sequence.VMName) "
-
-                            $Status = get-azvm -Name $($sequence.VMName) -Status | stop-azvm -force
-
-                                if($Status -eq $null)
-                                {
-                                    Write-Output "Error occured while stopping the Virtual Machine."
-                                }
-                                else
-                                {
-                                   Write-Output "Successfully stopped the VM  $($sequence.VMName) "
-                                   $VMState = (get-azvm -Name $($sequence.VMName) -Status) | select name, powerstate
-                                   Write-Output "$($VMState.name) - $($vmstate.PowerState)  "
-                                }
-                            }
-                                              
-                        catch
-                        {
-                            Write-Output "Error Occurred..."
-                            Write-Output $_.Exception
-                        }
-         }
-               
              
+                    $global:EnvironmentSubscriptionName = $global:sub.name
+                    $global:EnvironmentSubscriptionid =  $global:sub.Id
 
 
-             if($actionsequence.Trim().ToLower() -eq "Sequencestart")
-             {
+
+
+$Resources = get-azresource  | sort-object resourceType -Descending | Select -Property *
+ # | Where-Object {$_.ResourceType -eq 'Microsoft.Compute/virtualMachines' -and $_.resourcegroupname -eq  'azureResourceManagement'}
+
+$Resource_to_tag =  $($Resources) | select Name, Tags, resourcegroupname, ID , subscription |  ogv -passthru -title "resources to tag for ownership" | select ID, Name, Tags, ResourcegroupName
+            $resource_selected = $Resource_to_tag
+            
+
+$owner = Read-host "Enter owner : " 
+$purpose = Read-Host "Purpose :"
+$Team = Read-Host "Team name :"
+
+$businessUnit = Read-host "Business unit:" 
+$ASNNUMBER = Read-Host "app service number: "
+$Sequencestop = read-host " Sequencestop number:"
+
+$Sequencestart = read-host " Sequencestart number: "
+
+if(!($ASNNUMBER -like 'ASN*') )
+{
+    do
+      {
+        $ASNNUMBER = Read-Host "app service number: "
+     }until($ASNNUMBER -like 'ASN*')
+
+}
+
  
-              
-      
-                    try
-                        {
-                           
-                         
-                          $vmobj = New-object PSObject 
 
-                          $vmobj | add-member -MemberType NoteProperty -Name  VMNAME  -Value $($sequence.VMName)
-                          $vmobj | add-member -MemberType NoteProperty -Name Powerstate  -Value $($sequence.powerstate)
-                          $vmobj | add-member -MemberType NoteProperty -Name Sequencetag  -Value $($sequence.Sequencetag)
-                          $vmobj | add-member -MemberType NoteProperty -Name  TagSequencenumber -Value  $($sequence.TagSequencenumber)
+foreach($resource in  $resource_selected) 
+{
+    
+    $newtag = Get-azResource -ResourceName $resource.name -ResourceGroupName $resource.resourcegroupname 
+ 
                 
-                          
-                          $vmobj           
-                            write-OUTPUT " Executing action : $($actionsequence) on $($sequence.vmname) Sequence  $($sequence.TagSequencenumber)"  
+                      
+ 
+                 $settag = Set-azResource -Tag @{ 'Owner' ="$owner"`
+                 ;'Purpose' ="$purpose" `
+                 ;'Team' ="$Team" `
+                 ;'app service number'="$ASNNUMBER" `
+                 ;'businessUnit' ="$businessUnit"`
+                 ;'Sequencestop' = "$Sequencestop" `
+                 ;'Sequencestart' = "$sequencestart" ` 
+                 } -ResourceId $newtag.ResourceId -Force -ErrorAction silentlyContinue -ErrorVariable ProcessError
+
+               if($processError)
+                 {
+                     if($processError -like '*VM is not running*')
+                     {
+                         $Tagsvalue =  'resource is not running'
+
+                     }
+                      write-host "Not taggable - $ProcessError" -ForegroundColor Red
+                      $Tagsvalue =  'not taggable'
+                }
+                else
+                {
+
+                    $updatedresource = get-azresource -ResourceId $resource.Id | select Name, Tags, resourcegroupname, ID
+
+                   $Tagsvalue = $updatedresource.Tags.Values
+                }
+     
+
+     $Resourceobj = New-Object Psobject
+
+    $Resourceobj | Add-Member -MemberType NoteProperty -name Name  -Value $($updatedresource.Name) 
+    $Resourceobj | Add-Member -MemberType NoteProperty -name TAGS  -Value "$($Tagsvalue)"
+    $Resourceobj | Add-Member -MemberType NoteProperty -name Resourcegroupname  -Value $($updatedresource.ResourceGroupName) 
+    $Resourceobj | Add-Member -MemberType NoteProperty -name Subscription -Value $Subscription 
+    $Resourceobj | Add-Member -MemberType NoteProperty -name ID -Value  $($updatedresource.id)
+    [array]$updatedtags += $Resourceobj 
+} 
+
+
+$updatedtags 
 
  
-                                 Write-Output "VM action is : $($actionsequence) and Sequence - $($sequence.TagSequencenumber) "
+$CSS = @"
+<Title>Azure Resource $scope tagging Report:$(Get-Date -Format 'dd MMMM yyyy' )</Title>
+<Header>
+ 
+"<B>Azure Governance</B> <br><I>Report generated from {3} on $env:computername {0} by {1}\{2} as a scheduled task</I><br><br>Please contact $contact with any questions "$(Get-Date -displayhint date)",$env:userdomain,$env:username
+ </Header>
 
-                                Write-Output "Starting the VM :  $($sequence.VMName) "
+ <Style>
+th {
+	font: bold 11px "Trebuchet MS", Verdana, Arial, Helvetica,
+	sans-serif;
+	color: #FFFFFF;
+	border-right: 1px solid #C1DAD7;
+	border-bottom: 1px solid #C1DAD7;
+	border-top: 1px solid #C1DAD7;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	text-align: left;
+	padding: 6px 6px 6px 12px;
+	background: #5F9EA0;
 
-                                $Status = get-azvm -Name $($sequence.VMName) -Status  | Start-AzVM 
+}
+td {
+	font: 11px "Trebuchet MS", Verdana, Arial, Helvetica,
+	sans-serif;
+	border-right: 1px solid #C1DAD7;
+	border-bottom: 1px solid #C1DAD7;
+	background: #fff;
+	padding: 6px 6px 6px 12px;
+	color: #6D929B;
+}
+</Style>
+"@
 
-                                if($Status -eq $null)
-                                {
-                                    Write-Output "Error occured while starting the Virtual Machine $($vm.name) "
-                                }
-                                else
-                                {
-                                    Write-Output "Successfully started the VM  $($sequence.VMName)"
-                                    $VMState = (get-azvm -Name $($sequence.VMName)-Status) | select name, powerstate
-                                   Write-Output "$($VMState.name) - $($vmstate.PowerState)  "
-                                }
-                               
-                        }
-                    
-                    catch
-                    {
-                        Write-Output "Error Occurred..."
-                        Write-Output $_.Exception
-                    }
 
-                  } 
+
+ $scope = 'Updated'
+ 
+
+(($updatedtags | select Name, Tags, resourcegroupname, subscription, ID  | `
+ConvertTo-Html -Head $CSS ).replace('not taggable','<font color=red>not taggable</font>'))      | Out-File c:\temp\Azureresource_tag_report.html
+ Invoke-Item c:\temp\Azureresource_tag_report.html
+
+
+ $scope = 'Full Subscription'
+
+
+
+ $FullUpdated_resources = get-azresource  | sort-object resourceType -Descending | Select -Property *
+
+ $Full_audit = $($FullUpdated_resources) | select Name, Tags, resourcegroupname, ID , subscription 
+
+ foreach($Full_audit_resource in $Full_audit)
+ {
+ 
+
+  $FullListresource = get-azresource -ResourceId $Full_audit_resource.Id | select *
+  
+
+    $Tags = $FullListresource.Tags
+
+     IF ($null -eq $Tags )
+    {
+         $Tagsvalue = 'Not taggable'
+    
+    } 
+    Else
+    {
+          $Tagsvalue = $($Tags.Values)
     }
-   
+
+ $Resourceobj = New-Object Psobject
+
+    $Resourceobj | Add-Member -MemberType NoteProperty -name Name  -Value $($Full_audit_resource.Name) 
+    $Resourceobj | Add-Member -MemberType NoteProperty -name TAGS  -Value "$($Tagsvalue)"
+    $Resourceobj | Add-Member -MemberType NoteProperty -name Resourcegroupname  -Value $($Full_audit_resource.ResourceGroupName) 
+    $Resourceobj | Add-Member -MemberType NoteProperty -name Subscription -Value $subscription
+    $Resourceobj | Add-Member -MemberType NoteProperty -name SubscriptionID -Value $($FullListresource.SubscriptionId)
+    $Resourceobj | Add-Member -MemberType NoteProperty -name ID -Value $($Full_audit_resource.id)
+
+    [array]$FulltagsAudit += $Resourceobj 
+}
+
+
+
+(( $FulltagsAudit | select Name, Tags, resourcegroupname, subscription,SubscriptionID,ID  | `
+ConvertTo-Html -Head $CSS ).replace('Not taggable','<font color=red>not taggable</font>'))     | Out-File c:\temp\Azureresource_Full_tag_report.html
+ Invoke-Item c:\temp\Azureresource_Full_tag_report.html
+
+
+<#  no color report option
+
+  ( $FulltagsAudit | select Name, Tags, resourcegroupname, subscription,SubscriptionID, ID  | `
+ConvertTo-Html -Head $CSS )   | Out-File c:\temp\Azureresource_Full_tag_reporttest.html
+ Invoke-Item c:\temp\Azureresource_Full_tag_reporttest.html
+
+ #>
+
+
+

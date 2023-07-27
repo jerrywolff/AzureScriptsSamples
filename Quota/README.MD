@@ -30,8 +30,7 @@ This has been tested on Python 3.9.13 with the following modules:
 
 ## Screenshots
 
-#![image](https://github.com/geraldwolff/AzureScriptsSamples/assets/26615693/fc19096a-531a-4457-a63d-efda3d27c051)
-
+#
 
 #
 

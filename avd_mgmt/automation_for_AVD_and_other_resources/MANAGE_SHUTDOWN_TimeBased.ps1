@@ -37,7 +37,7 @@ import-module -name $_ -force
  update-module $_ -force
 
 }
-
+  
 
 #######>
 
@@ -73,7 +73,6 @@ $secretValue = $($secret.SecretValue)
 $credential = New-Object System.Management.Automation.PSCredential($username, $secretValue )
 
 ################################>
-
 
 New-EventLog -source manage_shutdown_monitor  -LogName Application  -ErrorAction Ignore
 
@@ -114,7 +113,9 @@ $timetostop = $($configured_time.Timetostop)
                     $Timetostop  = ($date).AddMonths(12)
                    Set-ItemProperty -Path "HKLM:\SOFTWARE\MANAGE_SHUTDOWN" -Name "Timetostopset" -Value "NO" -Force | Out-Null
 
+               msg * /time:300 /w    "Server Shutdown in 5 minutes. Please save your work. You will be logged off in in 5 Minutes."
 
+                     start-sleep -Seconds 300
                    ###########################################################################################################
 
 
@@ -124,10 +125,15 @@ $timetostop = $($configured_time.Timetostop)
                 # Stop the VM
                 write-host " Stopping " -ForegroundColor red -NoNewline
                 write-host " $($vmname) " -ForegroundColor blue -BackgroundColor white 
-                Write-EventLog -LogName "Application" -Source "Manage_shutdown_monitor" -EventID 6666 -EntryType Information `
-             -Message "shutting down." -Category 1 -RawData 10,20
 
-                 Stop-AzVM -Name $vmName -ResourceGroupName $resourceGroup -Force
+                Write-EventLog -LogName "Application" -Source "Manage_shutdown_monitor" -EventID 6667 -EntryType Information `
+             -Message "shutting down and deallocating $($vm.name)." -Category 1 -RawData 10,20
+
+                # Deallocate the VM
+                write-host " Deallocating " -ForegroundColor green -NoNewline
+                write-host " $($vmname) " -ForegroundColor Cyan
+
+                  Stop-AzVM -Name $vmName -ResourceGroupName $resourceGroup -Force
 
                 # Wait for the VM to stop
                 do {
@@ -135,9 +141,6 @@ $timetostop = $($configured_time.Timetostop)
                     $vm = Get-AzVM -Name $vmName -ResourceGroupName $resourceGroup
                 } while ($vm.PowerState -ne "VM deallocated")
 
-                # Deallocate the VM
-                write-host " Deallocating " -ForegroundColor green -NoNewline
-                write-host " $($vmname) " -ForegroundColor Cyan
 
                  Set-AzVM -Name $vmName -ResourceGroupName $resourceGroup -Location $location -Deallocate -Force
                  

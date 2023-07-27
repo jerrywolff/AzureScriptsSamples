@@ -72,7 +72,7 @@ $Resource_to_tag =  $($Resources) | select Name, Tags, resourcegroupname, ID , s
             $resource_selected = $Resource_to_tag
             
 
- $owner = Read-host "Enter owner : " 
+$owner = Read-host "Enter owner : " 
 $purpose = Read-Host "Purpose :"
 $Team = Read-Host "Team name :"
 
