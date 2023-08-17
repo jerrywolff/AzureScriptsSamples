@@ -54,12 +54,14 @@ Other uris :
 
  connect-azaccount 
 
- 
- $sub = get-azsubscription | ogv -title " Select subscription to check on App Sku HW options:" -PassThru
+ $subs = get-azsubscription  
 
-  
 
+
+ foreach($sub in $subs) 
+ {
    set-azcontext -Subscription $sub.Name
+ 
  
 
           Write-Host "Authenticating to Azure..." -ForegroundColor Cyan
@@ -73,9 +75,7 @@ Other uris :
                     "Logging you out due to cached token is expired for REST AUTH.  Re-run script"
                     #$null = Disconnect-AzAccount        
                 } 
-             
-                
- 
+   
             }
             catch
             {
@@ -87,59 +87,75 @@ Other uris :
                    
  
 
- function BuildBody
-(
-    [parameter(mandatory=$True)]
-    [string]$method
-)
-{
-    $BuildBody = @{
-    Headers = @{
-        Authorization = "Bearer $($token.token)"
-        'Content-Type' = 'application/json'
-    }
-    Method = $Method
-    UseBasicParsing = $true
-    }
-    $BuildBody
-}  
+         function BuildBody
+        (
+            [parameter(mandatory=$True)]
+            [string]$method
+        )
+        {
+            $BuildBody = @{
+            Headers = @{
+                Authorization = "Bearer $($token.token)"
+                'Content-Type' = 'application/json'
+            }
+            Method = $Method
+            UseBasicParsing = $true
+            }
+            $BuildBody
+        }  
  
-  $body = BuildBody GET
+          $body = BuildBody GET
 
- $sub = get-azsubscription -SubscriptionName "wolffentpsub"
-  set-azcontext -Subscription $sub.Name
+         $sub = get-azsubscription -SubscriptionName "$($sub.name)"
+          set-azcontext -Subscription $sub.Name
 
     
- $skulist = ''
+         $skulist = ''
+         $rgs = get-azresourcegroup 
+
+         $rg
+
+         foreach($rg in $rgs) 
+         {
+         $apiversion = '2021-04-01'
+            $appserviceplans = get-AzAppServicePlan -ResourceGroupName $($rg.ResourceGroupName)
+
+            foreach($appserviceplan in $appserviceplans) 
+            {
+                $uri = "https://management.azure.com/subscriptions/$($sub.id)/resourceGroups/$($rg.name)/providers/Microsoft.Web/serverfarms/$($appserviceplan.name)/skus?api-version=$apiversion"
+
+                $response = Invoke-RestMethod -Uri $uri -Headers $($body.Headers) -Method GET
 
 
-$uri = "https://management.azure.com/subscriptions/$($sub.id)/resourceGroups/wolffappserviceplanrg/providers/Microsoft.Web/serverfarms/wolffappserviceplan01/skus?api-version=2022-03-01"
 
-$response = Invoke-RestMethod -Uri $uri -Headers $authHeader -Method GET
+           
+                ($response.value).GetEnumerator() | foreach-object {
 
-
-
-$response | gm
-($response.value).GetEnumerator() | foreach-object {
-
-            write-host "Name : $($_.sku.name)  : Tier $($_.sku.tier) " -ForegroundColor green 
-            write-host "Capacity:  Min $($_.capacity.Minimum) Max: $($_.capacity.Maximum) ScaleType : $($_.scaletype)  elasticMaximum :$($_.capacity.elasticMaximum) elasticScalingAllowed : $($_.capacity.elasticScalingAllowed) " -ForegroundColor Cyan 
-            write-host "" -ForegroundColor green 
+                            write-host "Name : $($_.sku.name)  : Tier $($_.sku.tier) " -ForegroundColor green 
+                            write-host "Capacity:  Min $($_.capacity.Minimum) Max: $($_.capacity.Maximum) ScaleType : $($_.scaletype)  elasticMaximum :$($_.capacity.elasticMaximum) elasticScalingAllowed : $($_.capacity.elasticScalingAllowed) " -ForegroundColor Cyan 
+                            write-host "" -ForegroundColor green 
  
-             $Skuobj = new-object PSObject 
+                             $Skuobj = new-object PSObject 
 
-             $skuobj | Add-Member -MemberType NoteProperty -Name name -Value $($_.sku.name)
-              $skuobj | Add-Member -MemberType NoteProperty -Name tier -Value $($_.sku.tier)
-             $skuobj | Add-Member -MemberType NoteProperty -Name capacityMin -Value $($_.capacity.Minimum)
-             $skuobj | Add-Member -MemberType NoteProperty -Name capacityMax -Value $($_.capacity.Maximum)
-             $skuobj | Add-Member -MemberType NoteProperty -Name scaletype -Value $($_.capacity.scaletype)
-             $skuobj | Add-Member -MemberType NoteProperty -Name elasticMaximum -Value $($_.capacity.elasticMaximum)
-             $skuobj | Add-Member -MemberType NoteProperty -Name elasticScalingAllowed -Value $($_.capacity.elasticScalingAllowed)
-             [array]$skulist += $skuobj
+                             $skuobj | Add-Member -MemberType NoteProperty -Name name -Value $($_.sku.name)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name tier -Value $($_.sku.tier)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name capacityMin -Value $($_.capacity.Minimum)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name capacityMax -Value $($_.capacity.Maximum)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name scaletype -Value $($_.capacity.scaletype)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name elasticMaximum -Value $($_.capacity.elasticMaximum)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name elasticScalingAllowed -Value $($_.capacity.elasticScalingAllowed)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name Subscriptionname -Value $($sub.name)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name SubscriptionID -Value $($sub.ID)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name Appserviceplan -Value $($appserviceplan.name)
+                             $skuobj | Add-Member -MemberType NoteProperty -Name Location -Value $($appserviceplan.location)
 
 
+                             [array]$skulist += $skuobj
 
- }
+                 }
+            }
+    }
+}
 
 
 
@@ -185,11 +201,10 @@ td {
 
 
 
-($skulist | select name ,tier,capacityMin, capacityMax, scaletype, elasticMaximum, elasticScalingAllowed `
+
+($skulist | select name ,tier,capacityMin, capacityMax, scaletype, elasticMaximum, elasticScalingAllowed,Subscriptionname, SubscriptionID,Appserviceplan ,location  `
 | ConvertTo-Html -Head $CSS ) `
 |  Out-File "c:\temp\appserviceplan_hwSkus.html"
 
 
 invoke-item "c:\temp\appserviceplan_hwSkus.html"
-
-  
